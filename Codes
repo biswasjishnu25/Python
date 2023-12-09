@@ -1,0 +1,233 @@
+import arcpy
+import os
+
+#  SINGLE BUFFER
+arcpy.env.workspace = r"C:\Users\shiva\Downloads\Automation_script_description\ProProject_AutomatingUsingLists\ProProject_AutomatingUsingLists.gdb"
+arcpy.analysis.Buffer("Freeways", "Freeways_buffer", "500 meters")
+
+#  MULTIPLE BUFFER
+buffer = [1000,1200,1500]
+for buf in buffer:
+    arcpy.analysis.Buffer("MajorAttractions", f"MajorAttractions_buffer_{buf}", f"{buf} meters")
+
+#  VARIABLE BUFFER
+fc_list = arcpy.ListFeatureClasses()
+for fc in fc_list:
+    fc_dec = arcpy.Describe(fc)
+    fc_shape = fc_dec.shapeType
+
+    if fc_shape == 'Point':
+        output_name = fc + '_200_buffer'
+        buffer = "200 meters"
+
+    elif fc_shape == 'Polyline':
+        output_name = fc + '_300_buffer'
+        buffer = "300 meters"
+
+    elif fc_shape == 'Polygon':
+        output_name = fc + '_500_buffer'
+        buffer = "500 meters"
+
+    arcpy.analysis.Buffer(fc, output_name, buffer)
+
+#  DESCRIBING FEATURE CLASS AND WRITE IN TEXT FILE
+arcpy.env.workspace = r"C:\Users\shiva\Downloads\Automation_script_description\ProProject_AutomatingUsingLists\ProProject_AutomatingUsingLists.gdb"
+
+file_path = r"C:\Users\shiva\Downloads\tsdh.txt"
+file_obj = open(file_path, 'w')
+
+fc_list = arcpy.ListFeatureClasses()
+
+for feature in fc_list:
+    fc_desc = arcpy.Describe(feature)
+    file_obj.write("Feature name: {}, shape type: {}, spatial reference: {}\n".format(fc_desc.name, fc_desc.shapeType,fc_desc.spatialReference))
+    print(fc_desc.name)
+    print(fc_desc.shapeType)
+    print(fc_desc.spatialReference)
+
+    field_list = arcpy.ListFields(feature)
+    for field in field_list:
+        file_obj.write("Field name: {}, type: {}\n".format(field.name, field.type))
+        print(field.name)
+        print(field.type)
+
+# WORKING WITH SELECTION
+gdp = r"C:\Users\shiva\Downloads\Q2_Q3_Q4_ProProject\Q2_Q3_Q4_ProProject.gdb"
+
+mah = "Maharashtra_Tehsil"
+pub = "Public_places"
+sc = "Schools_Colleges"
+riv = "River"
+maharashtra_file= os.path.join(gdp,mah)
+public_file= os.path.join(gdp,pub)
+school_file= os.path.join(gdp,sc)
+river_file= os.path.join(gdp,riv)
+
+arcpy.MakeFeatureLayer_management(maharashtra_file,"Maharashtra")
+arcpy.MakeFeatureLayer_management(public_file,"public")
+arcpy.MakeFeatureLayer_management(school_file,"school")
+arcpy.MakeFeatureLayer_management(river_file,"river")
+
+arcpy.SelectLayerByAttribute_management("Maharashtra","NEW_SELECTION","NAME_2 ='Pune'")
+arcpy.SelectLayerByLocation_management("public","INTERSECT","Maharashtra","","SUBSET_SELECTION")
+count1 = arcpy.GetCount_management("public")
+print(count1)
+
+arcpy.SelectLayerByLocation_management("school","WITHIN_A_DISTANCE","river","3000 meters")
+count2 = arcpy.GetCount_management("school")
+print(count2)
+
+output1 = "Public_in_pune"
+output_file1= os.path.join(gdp,output1)
+arcpy.CopyFeatures_management("public",output_file1)
+
+output2 = "school_3000m"
+output_file2= os.path.join(gdp,output2)
+arcpy.CopyFeatures_management("school",output_file2)
+
+#   WORKING WITH SEARCH CURSOR
+public_places = r"C:\Users\shiva\Downloads\Q2_Q3_Q4_ProProject\Q2_Q3_Q4_ProProject.gdb\Public_places"
+file_path = r"C:\Users\shiva\Downloads\theatre.txt"
+file_obj = open(file_path,'w')
+field_list = ["name","osm_id","timestamp","type"]
+
+with arcpy.da.SearchCursor(public_places,field_list) as Scursor:
+    for row in Scursor:
+        if(row[3]=='theatre'):
+            file_obj.write("Name:{}, osm_id:{}, timestamp:{} \n".format(row[0],row[1],row[2]))
+
+
+#  WORKING WITH UPDATE CURSOR
+public_places = r"C:\Users\shiva\Downloads\Q2_Q3_Q4_ProProject\Q2_Q3_Q4_ProProject.gdb\Public_places"
+field_list = ["type"]
+
+with arcpy.da.UpdateCursor(public_places,field_list) as Ucursor:
+    for row in Ucursor:
+        if(row[0]=='bus_station'):
+            row[0]="Bus_stop"
+        elif(row[0]=='railway_station'):
+            row[0] = "Railway"
+
+        Ucursor.updateRow(row)
+
+# WORKING WITH INSERT CURSOR
+gdp_path = r"C:\Users\shiva\Downloads\Practical_5_6_ProProject\Practical_5_6_ProProject\05_06_Working_with_Cursors.gdb"
+fc_name = "MajorAttractions"
+fc_path = os.path.join(gdp_path,fc_name)
+
+field_list = ["NAME","ESTAB","ADDR"]
+record_list =[("NewAttraction_1",2023,"Street124"),("NewAttraction_2",2023,"Street125"),("NewAttraction_3",2023,"Street128")]
+
+i_cursor = arcpy.da.InsertCursor(fc_path,field_list)
+for record in record_list:
+    i_cursor.insertRow(record)
+
+
+# WORKING WITH POINT GEOMETRY
+x_delhi =  77.20852409389596
+y_delhi =  28.65392854307051
+
+point_obj = arcpy.Point(x_delhi,y_delhi)
+spatial_ref = arcpy.SpatialReference("WGS 1984")
+point_geom = arcpy.PointGeometry(point_obj,spatial_ref)
+
+gdp_path = r"C:\Users\shiva\Documents\ArcGIS\Projects\Arcpy_7\Arcpy_7.gdb"
+fc_name = "Delhi"
+
+fc_path = os.path.join(gdp_path,fc_name)
+
+arcpy.CopyFeatures_management(point_geom,fc_path)
+print("complete")
+
+# WORKING WITH POLYLINE GEOMETRY
+x_mumbai =  72.875489101964
+y_mumbai =  19.077263120208265
+x_pune = 73.84366705841208
+y_pune = 18.51660637428715
+
+pt_obj_mumbai = arcpy.Point(x_mumbai,y_mumbai)
+pt_obj_pune = arcpy.Point(x_pune,y_pune)
+
+spatial_ref = arcpy.SpatialReference("WGS 1984")
+polyline_array = arcpy.Array()
+polyline_array.add(pt_obj_mumbai)
+polyline_array.add(pt_obj_pune)
+
+gdp_path = r"C:\Users\shiva\Documents\ArcGIS\Projects\Arcpy_7\Arcpy_7.gdb"
+fc_name = "mumbai_pune"
+fc_path = os.path.join(gdp_path,fc_name)
+polyline_geom = arcpy.Polyline(polyline_array, spatial_ref)
+arcpy.CopyFeatures_management(polyline_geom,fc_path)
+print("complete")
+
+# WORKING WITH POLYGON
+x_mumbai =  72.875489101964
+y_mumbai =  19.077263120208265
+x_pune = 73.84366705841208
+y_pune = 18.51660637428715
+x_nashik = 73.78286446597899
+y_nashik = 19.997016869599005
+pt_obj_mumbai = arcpy.Point(x_mumbai,y_mumbai)
+pt_obj_pune = arcpy.Point(x_pune,y_pune)
+pt_obj_nashik = arcpy.Point(x_nashik,y_nashik)
+spatial_ref = arcpy.SpatialReference("WGS 1984")
+polygon_array = arcpy.Array()
+polygon_array.add(pt_obj_mumbai)
+polygon_array.add(pt_obj_pune)
+polygon_array.add(pt_obj_nashik)
+gdp_path = r"C:\Users\shiva\Documents\ArcGIS\Projects\P7_Geometry\P7_Geometry.gdb"
+fc_name = "mumbai_pune_nashik_polygon"
+fc_path = os.path.join(gdp_path,fc_name)
+polygon_geom = arcpy.Polygon(polygon_array, spatial_ref)
+arcpy.CopyFeatures_management(polygon_geom,fc_path)
+print("complete")
+
+
+#   GEOPROCESSING TOOL
+fc_input_path = arcpy.GetParameterAsText(0)
+output_type = arcpy.GetParameterAsText(1)
+output_folder = arcpy.GetParameterAsText(2)
+file_name = arcpy.GetParameterAsText(3)
+arcpy.MakeFeatureLayer_management(fc_input_path,"FcLayer")
+if output_type == "KMZ":
+    output_kml_file = "{}.KMZ".format(file_name)
+    full_output_kmz_path = os.path.join(output_folder,output_kml_file)
+    arcpy.conversion.LayerToKML("FcLayer",full_output_kmz_path)
+    print('exported')
+elif output_type == "EXCEL":
+    output_EXCEL_file = "{}.xlsx".format(file_name)
+    full_output_EXCEl_path = os.path.join(output_folder,output_EXCEL_file)
+    arcpy.TableToExcel_conversion("Fclayer",full_output_EXCEl_path)
+elif output_type == "SHP":
+    output_SHP_file = "{}".format(file_name)
+    full_output_SHP_path = os.path.join(output_folder,output_SHP_file)
+    if not os.path.exists(full_output_SHP_path):
+        os.makedirs(full_output_SHP_path)
+    fc_gdp_path, fc_name = os.path.split(fc_input_path)
+    arcpy.env.workspace = fc_gdp_path
+    arcpy.conversion.FeatureClassToShapefile(fc_name,full_output_SHP_path)
+elif output_type == "CAD":
+    output_CAD_file = "{}.dwg".format(file_name)
+    full_output_CAD_path = os.path.join(output_folder,output_CAD_file)
+
+    arcpy.conversion.ExportCAD(fc_input_path, "DWG_R2018", full_output_CAD_path,"USE_FILENAMES_IN_TABLES","OVERWRITE_EXISTING_FILES")
+
+# FETCHING MAP AND LAYOUT DETAILS
+pro_project_path = r"C:\Users\shiva\Documents\ArcGIS\Projects\Automatic_map_production\Automatic_map_production.aprx"
+
+my_project = arcpy.mp.ArcGISProject(pro_project_path)
+map_list = my_project.listMaps()
+for map in map_list:
+    print(map.name)
+    if map.name == "Current":
+        lyr_list = map.listLayers()
+        for lyr in lyr_list:
+            print(lyr.name)
+
+layout_list =  my_project.listLayouts()
+
+for layout in layout_list:
+    if layout.name == "Layout":
+        output_path = r"C:\Users\shiva\Downloads\ProProject_Mapping\san_diego.pdf"
+        layout.exportToPDF(output_path)
+    print("completed")
