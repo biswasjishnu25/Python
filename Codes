@@ -231,3 +231,28 @@ for layout in layout_list:
         output_path = r"C:\Users\shiva\Downloads\ProProject_Mapping\san_diego.pdf"
         layout.exportToPDF(output_path)
     print("completed")
+
+
+# jupyter notebook
+
+import arcpy
+import arcgis
+my_gis = arcgis.GIS("your web gis link", "username", "Your password")
+my_gis
+my_user = my_gis.users.me
+my_user
+my_user.access
+my_gis.users.search()
+my_gis.content.search("owner:username",max_items = 100, item_type= "Feature Layer")
+Major_Attraction= my_gis.content.get("5d4d00a1188a42c6b88b1b7990ec4f24")
+Major_Attraction
+Major_Attraction_lyr = Major_Attraction.layers[0]
+Major_Attraction_lyr
+Major_Attraction_lyr.properties.capabilities
+Major_Attraction_lyr.properties.fields
+for field in Major_Attraction_lyr.properties.fields:
+    print(field["name"])
+query_result = Major_Attraction_lyr.query(where = "1=1", out_fields= "NAME, ZIP")
+query_result.sdf
+query_result1 = Major_Attraction_lyr.query(where = "ESTAB >=2000", out_fields= "NAME, ZIP")
+query_result1.sdf
